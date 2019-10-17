@@ -1,14 +1,14 @@
 package kotlincodes.com.retrofitwithkotlin.adapters
 
-import android.support.v7.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.TextView
 import com.heady.test.R
 import com.heady.test.model.Varient
 
-class ProductVarientViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-        RecyclerView.ViewHolder(inflater.inflate(R.layout.list_cell_item, parent, false)) {
+class VarientViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
+         RecyclerView.ViewHolder(inflater.inflate(R.layout.list_cell_item, parent, false)) {
 
     private var mColor: TextView? = null
     private var mPrice: TextView? = null

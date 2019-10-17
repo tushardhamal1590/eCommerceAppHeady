@@ -2,28 +2,30 @@ package com.heady.test.activity
 
 import android.app.ProgressDialog
 import android.content.Context
-import android.support.v7.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.support.design.widget.BottomSheetDialog
-import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import android.util.Log
+import android.view.View
 import android.widget.ExpandableListAdapter
 import android.widget.ExpandableListView
+import android.widget.ImageView
 import com.heady.test.R
-import com.heady.test.model.Category
-import com.heady.test.model.FinalResponse
-import com.heady.test.model.Product
-import com.heady.test.model.Varient
+import com.heady.test.model.*
+import com.heady.test.retorfit.DatabaseClient
 import kotlincodes.com.retrofitwithkotlin.adapters.ExpandableAdapter
-import kotlincodes.com.retrofitwithkotlin.adapters.ProductAdapter
+import kotlincodes.com.retrofitwithkotlin.adapters.FilterAdapter
+import kotlincodes.com.retrofitwithkotlin.adapters.VarientAdapter
 import kotlincodes.com.retrofitwithkotlin.retrofit.ApiClient
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import kotlin.collections.ArrayList
-
-var listOfProduct: MutableList<String> = ArrayList()
 
 
 class MainActivity : AppCompatActivity() {
@@ -34,6 +36,13 @@ class MainActivity : AppCompatActivity() {
     var hashMapProduct: HashMap<String, MutableList<Product>> = HashMap()
     var context: Context? = null
 
+    var productrankingListOnlyProducts: MutableList<ProductRanking> = ArrayList()
+    var listOfProduct: MutableList<String> = ArrayList()
+    var keyWithProductRanking: HashMap<String?, MutableList<ProductRanking>> = HashMap()
+    var imageView: ImageView? = null
+    var mutableListKey: MutableList<String?> = ArrayList()
+    var productListFromDB: List<Product?> = ArrayList()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,8 +50,9 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
 
         context = this
-        expandableListView = findViewById(R.id.expandableListView)
 
+
+        expandableListView = findViewById(R.id.expandableListView)
         progerssProgressDialog = ProgressDialog(this)
         progerssProgressDialog.setTitle("Loading")
         progerssProgressDialog.setCancelable(false)
@@ -51,20 +61,55 @@ class MainActivity : AppCompatActivity() {
 
         listOfProduct()
 
+
+        imageView = findViewById(R.id.filter)
+
+        imageView?.setOnClickListener(object : View.OnClickListener {
+            override fun onClick(v: View?) {
+                applyFilterList()
+            }
+        })
+
     }
 
     fun bottomsheet(list: List<Varient>) {
 
         var recyclerView: RecyclerView?
-        var listAdapter: ProductAdapter?
+        var listAdapter: VarientAdapter?
         val view = layoutInflater.inflate(R.layout.bottom_sheet_dialog, null)
 
 
         recyclerView = view.findViewById(R.id.recyclerView)
-        recyclerView?.layoutManager = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
+        recyclerView?.layoutManager = LinearLayoutManager(
+            this,
+            RecyclerView.HORIZONTAL,
+            false
+        )
 
-        listAdapter = ProductAdapter(list)
+        listAdapter = VarientAdapter(list)
         recyclerView?.adapter = listAdapter
+        val dialog = BottomSheetDialog(this)
+        dialog.setContentView(view)
+        dialog.show()
+    }
+
+
+    fun applyFilterList() {
+
+
+        var recyclerView: RecyclerView?
+        var filterAdapter: FilterAdapter?
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_dialog, null)
+        recyclerView = view.findViewById(R.id.recyclerView)
+        recyclerView?.layoutManager = LinearLayoutManager(
+            this,
+            RecyclerView.VERTICAL,
+            false
+        )
+
+        filterAdapter = FilterAdapter(mutableListKey, keyWithProductRanking, productListFromDB as List<Product>)
+        recyclerView?.adapter = filterAdapter
+
         val dialog = BottomSheetDialog(this)
         dialog.setContentView(view)
         dialog.show()
@@ -84,6 +129,35 @@ class MainActivity : AppCompatActivity() {
                 getAllCategoryName(finalResponse.category)
 
                 updateUI()
+
+                GlobalScope.launch {
+
+                    //Insert all Products
+                    finalResponse.category?.forEach {
+                        it.product.forEach {
+                            context?.let { it1 -> DatabaseClient(it1).db.getAllProduct().insertAll(it) }
+                        }
+                    }
+
+
+                    //Insert All Product  Ranking
+                    finalResponse.ranking.forEach {
+                        context?.let { it1 ->
+                            DatabaseClient(it1).db.getAllProductRanking().insertAllProductRanking(it)
+                        }
+                    }
+
+                    var datarnking: List<Ranking>? =
+                        context?.let { it1 -> DatabaseClient(it1).db.getAllProductRanking().getAllProductsRanking() }
+                    for (da in datarnking!!) {
+                        keyWithProductRanking.put(da.ranking, da.listRankProduct as MutableList<ProductRanking>)
+                    }
+
+                    productListFromDB = context?.let { DatabaseClient(it).db.getAllProduct().getAllProducts() }!!
+
+                    mutableListKey = keyWithProductRanking.keys.toMutableList()
+
+                }
             }
 
             override fun onFailure(call: Call<FinalResponse>?, t: Throwable?) {
@@ -96,9 +170,10 @@ class MainActivity : AppCompatActivity() {
 
     fun getAllCategoryName(category: List<Category>) {
 
-        for (name in category) {
-            var productList: MutableList<Product> = ArrayList()
 
+        for (name in category) {
+
+            var productList: MutableList<Product> = ArrayList()
             name.name?.let { listOfProduct.add(it) }
 
             for (pName in name.product) {
@@ -108,17 +183,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
     fun updateUI() {
         if (expandableListView != null) {
             adapter = context?.let { ExpandableAdapter(it, listOfProduct, hashMapProduct) }
             (adapter as ExpandableAdapter?)?.listener = {
-
                 bottomsheet(it)
             }
 
             expandableListView!!.setAdapter(adapter)
         }
     }
+
 
 }
 

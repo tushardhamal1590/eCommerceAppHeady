@@ -1,5 +1,7 @@
 package com.heady.test.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
 
 class FinalResponse {
@@ -11,56 +13,63 @@ class FinalResponse {
     val ranking: List<Ranking> = ArrayList()
 }
 
+@Entity(tableName = "product_ranking")
 class Ranking {
 
     @SerializedName("ranking")
-    val ranking: String? = null
+    var ranking: String? = null
+
+    @PrimaryKey(autoGenerate = true)
+    var id:Int? = null
 
     @SerializedName("products")
-    val listRankProduct: List<ProductRanking> = ArrayList()
+    var listRankProduct: List<ProductRanking> = ArrayList()
 
 }
 
 class ProductRanking {
 
     @SerializedName("id")
-    val productId: Int? = null
+    var productId: Int? = null
 
     @SerializedName("view_count")
-    val viewCount: Int? = null
+    var viewCount: Int? = null
 }
 
 
 class Category {
 
     @SerializedName("id")
-    val id: Int? = null
+    var id: Int? = null
 
     @SerializedName("name")
-    val name: String? = null
+    var name: String? = null
 
     @SerializedName("products")
-    val product: List<Product> = ArrayList()
+    var product: List<Product> = ArrayList()
 }
 
+@Entity(tableName = "product")
 class Product {
 
+    @PrimaryKey
     @SerializedName("id")
-    val id: Int? = null
+    var id: Int? = null
 
     @SerializedName("name")
-    val name: String? = null
+    var name: String? = null
 
-    @SerializedName("date_added")
-    val date: String? = null
+//    @SerializedName("date_added")
+//    val date: String? = null
 
 
     @SerializedName("variants")
-    val varient: List<Varient> = ArrayList()
+    var varient: List<Varient> = ArrayList()
 
     @SerializedName("tax")
-    val tax: Tax? = null
+    var tax: Tax? = null
 }
+
 
 class Varient {
 
